@@ -1,0 +1,41 @@
+//@version=5
+indicator("Multi-Period VWAP", shorttitle="MP-VWAP", overlay=true)
+
+// Function to calculate VWAP
+vwapCalculation(length) =>
+    sum = 0.0
+    sumVol = 0.0
+    for i = 0 to length - 1
+        sum := sum + close[i] * volume[i]
+        sumVol := sumVol + volume[i]
+    sum / sumVol
+
+// Input to show or hide individual VWAPs
+showYearly = input(true, "Show Yearly VWAP")
+showQuarterly = input(true, "Show Quarterly VWAP")
+showMonthly = input(true, "Show Monthly VWAP")
+showWeekly = input(true, "Show Weekly VWAP")
+
+// Calculate the VWAPs
+yearlyVWAP = vwapCalculation(365)
+quarterlyVWAP = vwapCalculation(90)
+monthlyVWAP = vwapCalculation(30)
+weeklyVWAP = vwapCalculation(7)
+
+// Plotting the VWAPs
+plot(showYearly ? yearlyVWAP : na, color=color.blue, title="Yearly VWAP")
+plot(showQuarterly ? quarterlyVWAP : na, color=color.orange, title="Quarterly VWAP")
+plot(showMonthly ? monthlyVWAP : na, color=color.green, title="Monthly VWAP")
+plot(showWeekly ? weeklyVWAP : na, color=color.yellow, title="Weekly VWAP")
+
+// Alert Conditions
+crossYearly = ta.crossover(close, yearlyVWAP) or ta.crossunder(close, yearlyVWAP)
+crossQuarterly = ta.crossover(close, quarterlyVWAP) or ta.crossunder(close, quarterlyVWAP)
+crossMonthly = ta.crossover(close, monthlyVWAP) or ta.crossunder(close, monthlyVWAP)
+crossWeekly = ta.crossover(close, weeklyVWAP) or ta.crossunder(close, weeklyVWAP)
+
+// Create Alert Conditions
+alertcondition(crossYearly, title="Price Cross Yearly VWAP", message="Price has crossed the Yearly VWAP")
+alertcondition(crossQuarterly, title="Price Cross Quarterly VWAP", message="Price has crossed the Quarterly VWAP")
+alertcondition(crossMonthly, title="Price Cross Monthly VWAP", message="Price has crossed the Monthly VWAP")
+alertcondition(crossWeekly, title="Price Cross Weekly VWAP", message="Price has crossed the Weekly VWAP")

@@ -1,0 +1,72 @@
+// What is this? 
+// YVWAP x EMAs x AVG ST. DEV
+// This is final one, an idea I came up with after creating MTF EMA concept. 
+// This one I have always tried to keep for myself (selfish). 
+// This indicator allows you to average Multiple EMA Periods from Multiple Higher Timeframes 
+// with Non Anchored YVWAP and I have recently added an option for Standard Deviation Multiplier and Percentage aswell for Bands.
+
+//@version=5
+indicator("Yearly VWAP, Variable EMA, and StdDev Bands with % Option", shorttitle="YearlyVWAP_EMAsAvg_StdDev%", overlay=true)
+
+// Timeframe and Standard Deviation Multiplier options
+emaTimeframe = input.string("1D", "EMA Timeframe", options=["1D", "12H", "4H", "3D", "1W"])
+emaPeriod = input.int(200, "EMA Period", options=[50, 100, 200])
+multiplierType = input.string("Fixed", "Multiplier Type", options=["Fixed", "Percentage"])
+stdDevMultiplier = input.float(2.0, "Std Dev Multiplier", minval=0.1)
+stdDevPercentage = input.float(5.0, "Std Dev Percentage", minval=0.1, maxval=100.0)
+
+// Function to calculate yearly VWAP
+yearlyVWAP() =>
+    startOfYear = year(timenow) != year(time)
+    var float yearlyVolume = na
+    var float yearlyPriceVolume = na
+    yearlyVolume := startOfYear ? volume : yearlyVolume + volume
+    yearlyPriceVolume := startOfYear ? close * volume : yearlyPriceVolume + close * volume
+    yearlyVWAP = yearlyPriceVolume / yearlyVolume
+
+// Function to get EMA based on selected timeframe and period
+getEma(tf, period) =>
+    request.security(syminfo.tickerid, tf, ta.ema(close, period))
+
+// Variable to store the EMA, declared with a type to handle NA values
+var float ema = na
+
+// Selecting the EMA based on chosen timeframe and period
+if emaTimeframe == "1D"
+    ema := getEma("D", emaPeriod)
+else if emaTimeframe == "12H"
+    ema := getEma("720", emaPeriod)
+else if emaTimeframe == "4H"
+    ema := getEma("240", emaPeriod)
+else if emaTimeframe == "3D"
+    ema := getEma("3D", emaPeriod)
+else if emaTimeframe == "1W"
+    ema := getEma("W", emaPeriod)
+
+// Yearly VWAP
+yVWAP = yearlyVWAP()
+
+// Calculating the average of Yearly VWAP and selected timeframe EMA
+var float averageLine = na
+if not na(ema)
+    averageLine := (yVWAP + ema) / 2
+
+// Calculating the standard deviation
+length = 200 // Length for standard deviation calculation
+stdDev = ta.stdev(averageLine, length)
+
+// Calculating Upper and Lower Bands based on multiplier type
+var float upperBand = na
+var float lowerBand = na
+if multiplierType == "Fixed"
+    upperBand := averageLine + stdDevMultiplier * stdDev
+    lowerBand := averageLine - stdDevMultiplier * stdDev
+else
+    upperBand := averageLine + (averageLine * stdDevPercentage / 100)
+    lowerBand := averageLine - (averageLine * stdDevPercentage / 100)
+
+// Plotting the average line and bands
+p1 = plot(averageLine, color=color.blue, title="Average Line")
+p2 = plot(upperBand, color=color.green, title="Upper Band")
+p3 = plot(lowerBand, color=color.red, title="Lower Band")
+fill(p2, p3, color=color.new(color.purple, 90), title="Band Fill")
